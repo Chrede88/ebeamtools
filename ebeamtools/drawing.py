@@ -208,7 +208,8 @@ def get_vertices(dxf, layer, split_lines = True, warn=True):
     poly_list = [p for p in poly_list if len(p)>1]
 
     poly_list = pg.close_all_polygons(poly_list, SMALLEST_SCALE, warn=warn) # make sure all polygons are closed
-    poly_list = pg.remove_duplicate_polygons(poly_list, SMALLEST_SCALE, warn=warn) # remove duplicates
+    if remove_duplicate:
+    	poly_list = pg.remove_duplicate_polygons(poly_list, SMALLEST_SCALE, warn=warn) # remove duplicates
     poly_list = pg.normalize_polygon_orientation(poly_list, warn=warn) # orient all polygons counter-clockwise
     poly_list = pg.choose_scan_side(poly_list, SMALLEST_SCALE)
     return pg.list_to_nparray_safe(poly_list)
@@ -217,7 +218,7 @@ def get_vertices(dxf, layer, split_lines = True, warn=True):
 ### Operations on multiple layers ###
 #####################################
 
-def import_multiple_layers(dxf, layers, split_lines=True, warn=True):
+def import_multiple_layers(dxf, layers, split_lines=True, remove_duplicate=True, warn=True):
     """ Import multiple layers from dxf drawing into a dictionary.
 
         Args:
@@ -244,7 +245,7 @@ def import_multiple_layers(dxf, layers, split_lines=True, warn=True):
     poly_dict = {}
     for l in layers:
         if l in all_layers:
-            poly_dict[l] = get_vertices(dxf, l, split_lines=split_lines, warn=warn)
+            poly_dict[l] = get_vertices(dxf, l, split_lines=split_lines, remove_duplicate=remove_duplicate, warn=warn)
         else:
             if warn:
                 print('LAYER: {0} NOT CONTAINED IN DXF'.format(l))
@@ -537,7 +538,7 @@ def plot_layers(ax, filename, layers, extent=None):
 class Layers:
     """ class used to process layers for ebeam writing """
 
-    def __init__(self, filename, layers, split_lines = True):
+    def __init__(self, filename, layers, split_lines = True, remove_duplicate = True):
 
         self.filename = filename
         self.dxf = ezdxf.readfile(filename)
@@ -556,7 +557,7 @@ class Layers:
             if l not in all_layers:
                 raise KeyError('{0} IS NOT A LAYERNAME'.format(l))
 
-        self.poly_dict = import_multiple_layers(self.dxf, self.layers, split_lines=split_lines, warn=True)
+        self.poly_dict = import_multiple_layers(self.dxf, self.layers, split_lines=split_lines, remove_duplicate=remove_duplicate, warn=True)
 
     def estimate_writetime(self, dose, current):
         """ Estimate write time for given layers.
